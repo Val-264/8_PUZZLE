@@ -12,6 +12,7 @@
 using namespace std;
 
 #define TAM 500
+const int tiempo_espera = 1000; // Esperar un segundo antes de mostrar el sigueinte paso 
 
 //-----------CLASE PARA MANEJO DE PUNTAJES (GUARDAR Y MOSTRAR EN EL ARCHIVO)-----------
 class Clase_Usuario { 
@@ -71,8 +72,8 @@ class Clase_Usuario {
                 // Actualizar fecha
                 time_t hoy = time(0);
                 tm * timeinfo = localtime(&hoy);
-                existente.dia.dd = timeinfo->tm_mday;  // CORRECCIÓN: tm_mday no tm_wday
-                existente.dia.mm = timeinfo->tm_mon + 1; // CORRECCIÓN: +1 porque tm_mon es 0-11
+                existente.dia.dd = timeinfo->tm_mday; 
+                existente.dia.mm = timeinfo->tm_mon + 1; 
                 existente.dia.aa = 1900 + timeinfo->tm_year;
                 
                 // Posicionarse y actualizar
@@ -147,7 +148,7 @@ class Clase_Usuario {
 };
 
 //-----------CLASE PARA RESOLVER CON A* USANDO HUERÍSTICA DE MANHATAN-----------
-class resolver_con_A {
+class A_star {
 
     private:
 };
@@ -214,14 +215,12 @@ class Puzzle{
             double opc;
             int opcion;
 
-            int nivel = 1;
             do{
                 cout << "\n        PUZZLE 8         \n\n";
                 cout << "\n------MODO INTELIGENTE-----:";
                 cout << "\n0- Salir";
                 cout << "\n1- Ver especificaciones del modo inteligente";
-                cout << "\n2- Iniciar juego"; 
-                cout << "\n3- Elegir nivel (nivel actual: " << nivel << ")"; 
+                cout << "\n2- Iniciar juego";  
                 cout << "\nElige una opcion: ";
                 cin >> opc;
 
@@ -239,7 +238,6 @@ class Puzzle{
                 switch (opcion){
                     case 1: verEspecificaciones('i'); break;
                     case 2: jugarModoInteligente(); break;
-                    case 3: nivel = cambiarNivel(nivel);
                     case 0: cout<<"Saliendo...";
                     default: cout<<"Opcion invalida\n";
                 }
@@ -263,7 +261,7 @@ class Puzzle{
             inicializarTablero(tableroInteligente);
 
             // Resolver 
-            resolver_con_A a;
+            A_star a;
 
             cout << "\n-----FIN DEL JUEGO-----\n";
 
@@ -386,12 +384,14 @@ class Puzzle{
         void menuModoUsuario(){
             float opc;
             int opcion;
+            int nivel = 1;
 
             do{
                 cout << "\n        PUZZLE 8         \n\n";
                 cout << "\n------MODO USUARIO-----:";
                 cout << "\n0- Salir";
                 cout << "\n1- Ver especificaciones del modo usuario";
+                cout << "\n3- Elegir nivel (nivel actual: " << nivel << ")";
                 cout << "\n2- Iniciar juego"; 
                 cout << "\nElige una opcion: ";
                 cin >> opc;
@@ -409,7 +409,8 @@ class Puzzle{
 
                 switch (opcion){
                     case 1: verEspecificaciones('u'); break;
-                    case 2: jugarModoUsuario(); break;
+                    case 2: jugarModoUsuario(nivel); break;
+                    case 3: nivel = cambiarNivel(nivel);
                     case 0: cout<<"Saliendo...";
                     default: cout<<"Opcion invalida\n";
                 }
@@ -419,9 +420,9 @@ class Puzzle{
             }while(opcion!=0);            
         }
 
-        void jugarModoUsuario() {
+        void jugarModoUsuario(int nivel) {
             // Gneración de un tablero aleatorio con números del 0 al 8, sin que se repitan números
-            generarNuevoJuego(); 
+            generarNuevoJuego(nivel); 
 
             // Tablero del usuario
             vector<vector<int>> tableroUsuario;
@@ -433,7 +434,7 @@ class Puzzle{
 
             // Resolver 
             int puntaje_acumulado = 0;
-            resolver_con_A a;
+            A_star a;
 
             // Pedir datos del usuario una vez fianlizado el juego (Fin del juego es cuando el usaurio encuntra la solución o cuando decide salir)
             pedirDatosUsuario(puntaje_acumulado);
@@ -444,10 +445,18 @@ class Puzzle{
         }
 
         // Gneración de un tablero aleatorio con números del 0 al 8, sin que se repitan números
-        void generarNuevoJuego() {
-            // Generar estado inicial 
+        void generarNuevoJuego(int nivel) {
+            // El estado final siempre es el mismo: 0, 1, 2, 3, 4, 5, 6, 7, 8 
+            int numeros_validos = 0;
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    estadoFinal[i][j] == numeros_validos;
+                    numeros_validos++;
+                }
+            }
 
-            // Generar estado final
+            // Generar estado inicial de forma aleatoira: 
+            //nivel 1 = menos movimientos para llegar a estado final, nivel 2 = más movimientos para llegar a estado final
             
         }
 
