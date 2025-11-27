@@ -2,9 +2,11 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
+#include <cctype>
 #include <windows.h>
 #include <conio.h> // Para capturar teclas 
 #include <fstream>
+#include <string>
 #include <vector>
 
 using namespace std;
@@ -17,24 +19,131 @@ class Clase_Usuario {
         // Datos para guardar en el archivo
         struct Datos_Usuario {
             char nombreUsuario[TAM];
-            int puntuacion;         // El puntaje debe ser acumulativo 
+            int puntuacion;         // El puntaje debe ser acumulativo
+            struct Fecha {
+                int dd;
+                int mm;
+                int aa;
+            }; 
+            Fecha dia;
         };
         
     public:
         Clase_Usuario(){}
+        
         // Guardar nombre del usuario que terminó su juego y su puntaje 
         void guardarNombrePuntaje(char nombre[TAM], int puntaje) {
-            Datos_Usuario nuevo;
+            Datos_Usuario nuevo, existente;
+            fstream puntajes;
+            bool existe = false;
+            streampos posicion;
 
-            // Si es el nombre ya existe se suman los puntajes (acumulación de puntaje)
-            
+            // Abrir archivo para lectoescritura
+            puntajes.open("puntajes.dat", ios::binary | ios::in | ios::out);
+
+            // Si el archivo no existe, crearlo
+            if(!puntajes) {
+                puntajes.open("puntajes.dat", ios::binary | ios::out);
+                puntajes.close();
+                puntajes.open("puntajes.dat", ios::binary | ios::in | ios::out);
+                
+                if(!puntajes) {
+                    cerr << "\nNo se pudo abrir el archivo para guardar puntajes\n";
+                    system("pause");
+                    system("cls");
+                    return;
+                }
+            }
+
+            // Buscar si el usuario ya existe
+            while (puntajes.read(reinterpret_cast<char*>(&existente), sizeof(Datos_Usuario))) {
+                if (strcmp(existente.nombreUsuario, nombre) == 0) {
+                    existe = true;
+                    posicion = puntajes.tellg() - streampos(sizeof(Datos_Usuario));
+                    break;
+                }
+            }
+
+            if (existe) {
+                // Actualizar usuario existente
+                existente.puntuacion += puntaje;
+                
+                // Actualizar fecha
+                time_t hoy = time(0);
+                tm * timeinfo = localtime(&hoy);
+                existente.dia.dd = timeinfo->tm_mday;  // CORRECCIÓN: tm_mday no tm_wday
+                existente.dia.mm = timeinfo->tm_mon + 1; // CORRECCIÓN: +1 porque tm_mon es 0-11
+                existente.dia.aa = 1900 + timeinfo->tm_year;
+                
+                // Posicionarse y actualizar
+                puntajes.seekp(posicion);
+                puntajes.write(reinterpret_cast<char*>(&existente), sizeof(Datos_Usuario));
+            } else {
+                // Crear nuevo usuario
+                strcpy(nuevo.nombreUsuario, nombre);
+                nuevo.puntuacion = puntaje;
+
+                // Obtener fecha actual CORREGIDA
+                time_t hoy = time(0);
+                tm * timeinfo = localtime(&hoy);
+                nuevo.dia.dd = timeinfo->tm_mday;    // Día del mes (1-31)
+                nuevo.dia.mm = timeinfo->tm_mon + 1; // Mes (1-12)
+                nuevo.dia.aa = 1900 + timeinfo->tm_year;
+                
+                // Escribir al final del archivo
+                puntajes.clear(); // Limpiar flags de error
+                puntajes.seekp(0, ios::end);
+                puntajes.write(reinterpret_cast<char*>(&nuevo), sizeof(Datos_Usuario));
+            }
+
+            puntajes.close();
         }
 
         // Ver los nombres de los usuarios y sus puntajes  
         void mostrarPuntajes() {
             Datos_Usuario guardado;
-        }
+            ifstream puntajes; // Usar ifstream para solo lectura
 
+            // Abrir archivo para lectura
+            puntajes.open("puntajes.dat", ios::binary | ios::in);
+
+            // Verificar si el archivo existe y tiene datos
+            if (!puntajes) {
+                cout << "\nNo hay puntajes guardados aún.\n";
+                system("pause");
+                system("cls");
+                return;
+            }
+
+            // Verificar si el archivo está vacío
+            puntajes.seekg(0, ios::end);
+            if (puntajes.tellg() == 0) {
+                cout << "\nNo hay puntajes guardados aún.\n";
+                puntajes.close();
+                system("pause");
+                system("cls");
+                return;
+            }
+            puntajes.seekg(0, ios::beg); // Volver al inicio
+
+            // Mostrar archivo 
+            cout << "\n                PUZZLE 8         \n\n";
+            cout << "------------------PUNTAJES------------------\n";
+            cout << "Nombre\t\tPuntaje\tFecha\n";
+            cout << "--------------------------------------------\n";
+
+            // Leer y mostrar todos los registros
+            while (puntajes.read(reinterpret_cast<char*>(&guardado), sizeof(Datos_Usuario))) {
+                cout << guardado.nombreUsuario << "\t\t" 
+                     << guardado.puntuacion << "\t"  
+                     << guardado.dia.dd << "/" << guardado.dia.mm << "/" << guardado.dia.aa << endl;
+            }
+
+            puntajes.close();
+            cout << "\n--------------------------------------------\n";
+            system("pause");
+            system("cls");
+        }
 };
 
 //-----------CLASE PARA RESOLVER CON A* USANDO HUERÍSTICA DE MANHATAN-----------
@@ -323,10 +432,11 @@ class Puzzle{
             inicializarTablero(tableroUsuario);
 
             // Resolver 
+            int puntaje_acumulado = 0;
             resolver_con_A a;
 
             // Pedir datos del usuario una vez fianlizado el juego (Fin del juego es cuando el usaurio encuntra la solución o cuando decide salir)
-            pedirDatosUsuario();
+            pedirDatosUsuario(puntaje_acumulado);
 
             // Mostrar los puntajes de todos los jugadores 
             Clase_Usuario us;
@@ -341,44 +451,33 @@ class Puzzle{
             
         }
 
-        void pedirDatosUsuario() {
+        // 
+        int totCorrectos(vector<vector<int>> tableroUsuario) {
+            int correctos = 0;
+
+            // Verificar cuántas piezas están en el lugar correcto cada que se mueve una pieza para mostrar el puntaje al usuario durante el juego
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    if (tableroUsuario[i][j] == estadoFinal[i][j]) correctos++;
+                    else correctos--;
+                }
+            }
+
+            return correctos;
+        }
+
+        void pedirDatosUsuario(int puntaje_acumulado) {
             system("cls");
             char nombre[TAM];
-            float punt;
-            int puntaje;
-            bool puntajeValido = false;
             Clase_Usuario us; 
             
-            do{
-                cout << "\n-----FIN DEL JUEGO-----\n";
-                cout << "Nombre: "; 
-                cin.ignore();
-                cin.getline(nombre,TAM);
-                cout << "Puntaje: "; cin >> punt;
-                
-                // Verificar que puntaje sea un número entero
-		        if (cin.fail()){ // Si la entrada no es un numero
-			        cin.clear(); // Limpiar estado de error de cin
-			        cin.ignore(1000,'\n'); // Descartar la entrada incorrecta hasta mil caracteres o hasta encontrar un salto de linea
-                    cout << "ERROR! puntaje no valido\n";
-                    system("pause");
-                    system("cls");
-                }
-		        else if (fmod(punt,1)!=0) { // Descartar numeros con decimales
-                    cout << "ERROR! puntaje no valido\n";
-                    system("pause");  
-                    system("cls");                 
-                }
-		        else {
-                    puntaje=static_cast<int>(punt); // Convertir entrada a enteros si es válida
-                    puntajeValido = true;
-                    system("cls");
-                }
+            cout << "\n-----FIN DEL JUEGO-----";
+            cout << "\nLo hisciste muy bien!, cual es tu nombre?\n";
+            cout << "Nombre: "; 
+            cin.ignore();
+            cin.getline(nombre,TAM);
 
-                
-            }while(!puntajeValido);
-
-            us.guardarNombrePuntaje(nombre, puntaje);
+            us.guardarNombrePuntaje(nombre, puntaje_acumulado);
         }
     
         //-----------OTRAS FUNCIONES-----------
