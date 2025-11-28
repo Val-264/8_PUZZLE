@@ -1,7 +1,7 @@
 #include <iostream>
 #include <math.h>
 #include <stdlib.h>
-#include <time.h>
+#include <ctime>
 #include <cctype>
 #include <windows.h>
 #include <conio.h>
@@ -17,7 +17,6 @@
 using namespace std;
 
 #define TAM 50
-const int tiempo_espera = 1000;
 
 //-----------CLASE PARA MANEJO DE PUNTAJES-----------
 class Clase_Usuario { 
@@ -119,6 +118,8 @@ class Clase_Usuario {
             }
             puntajes.close();
             cout << "\n--------------------------------------------\n";
+
+            system("pause");
         }
 };
 
@@ -372,26 +373,28 @@ class Puzzle{
         }
 
     private:
+        //-----------FUNCIONES PARA MODO INTELIGENTE-----------
         void menuModoInteligente() {            
             double opc;
             int opcion;
 
             do{
-                cout << "\n        PUZZLE 8         \n\n";
-                cout << "\n------MODO INTELIGENTE-----:";
+                cout << "\n        PUZZLE 8         \n";
+                cout << "\n------MODO INTELIGENTE-----\n";
                 cout << "\n0- Salir";
                 cout << "\n1- Ver especificaciones del modo inteligente";
                 cout << "\n2- Iniciar juego";  
                 cout << "\nElige una opcion: ";
                 cin >> opc;
 
-                if (cin.fail()){
-			        cin.clear();
-			        cin.ignore(1000,'\n');
+                // Verificar entrada válida 
+                if (cin.fail()){ // Si la entrada no es un número
+			        cin.clear(); // Limpiar estado de error de cin 
+			        cin.ignore(1000,'\n'); // Descartar la entrada incorrecta hasta mil caracteres o hasta encontrar un salto de línea
                     opcion=500;
                 }
-		        else if (fmod(opc,1)!=0) opcion=500;
-		        else opcion=static_cast<int>(opc);
+		        else if (fmod(opc,1)!=0) opcion=500; // Descartar números con decimales 
+		        else opcion=static_cast<int>(opc);  // Convertir entrada a entero si es válida 
 
                 system("cls");
 
@@ -402,6 +405,7 @@ class Puzzle{
                     default: cout<<"Opcion invalida\n";
                 }
 
+                // Limpiar matrices de estado inicial y final antes de un juego nuevo  
                 if(opcion == 2 || opcion == 0) limpiarMatrices();
                 system("cls");
             }while(opcion!=0);                        
@@ -411,6 +415,7 @@ class Puzzle{
             capturarInicioFin();
             vector<vector<int>> tableroInteligente = estadoInicial;
 
+            cout << "Buscando si existe solucion...\n";
             A_star a(estadoFinal);
             vector<vector<vector<int>>> solucion = a.resolver(estadoInicial);
 
@@ -420,9 +425,17 @@ class Puzzle{
                 return;
             }
 
-            cout << "Solucion encontrada! Mostrando pasos...\n";
+            // Pedir el tiempo de espera para mostrar el paso a paso en segundos 
+            int tiempo_espera = pedirTiempoEspera();
+
             for (size_t paso = 0; paso < solucion.size(); paso++) {
+                // La velociad se puede cambiar durante la ejecucuión 
+                if (_kbhit()) tiempo_espera = cambiarTiempoEspera(tiempo_espera); 
+
                 system("cls");
+                cout << "\n        PUZZLE 8         \n";
+                cout << "\n------MODO INTELIGENTE-----\n";
+                cout << "Velocidad: " << tiempo_espera/1000 << " segundos" << endl;
                 cout << "Paso " << paso + 1 << " de " << solucion.size() << ":\n";
                 mostrarTablero(solucion[paso]);
                 if (paso < solucion.size() - 1) {
@@ -437,14 +450,14 @@ class Puzzle{
             bool pantallaLimpia = false;
             bool matrizValida = false;
 
-            cout << "\n        PUZZLE 8         \n\n";
+            cout << "\n        PUZZLE 8         \n";
             cout << "\n------MODO INTELIGENTE-----";
             cout << "\nIngresa los numeros para el estado inicial y final (solucion) del juego";
             cout << "\nDeben ser numeros entre 0 y 8 y ninguno debe repetirse\n";
 
             do{
                 if (pantallaLimpia) {
-                    cout << "\n        PUZZLE 8         \n\n";
+                    cout << "\n        PUZZLE 8         \n";
                     cout << "\n------MODO INTELIGENTE-----";
                     cout << "\nIngresa los numeros para el estado inicial y final (solucion) del juego";
                     cout << "\nDeben ser numeros entre 0 y 8 y ninguno debe repetirse\n";
@@ -472,7 +485,7 @@ class Puzzle{
             matrizValida = false;
             do{
                 if (pantallaLimpia) {
-                    cout << "\n        PUZZLE 8         \n\n";
+                    cout << "\n        PUZZLE 8         \n";
                     cout << "\n------MODO INTELIGENTE-----";
                     cout << "\nIngresa los numeros para el estado inicial y final (solucion) del juego";
                     cout << "\nDeben ser numeros entre 0 y 8 y ninguno debe repetirse\n";
@@ -505,6 +518,49 @@ class Puzzle{
             }while(!matrizValida);
         }
 
+        int pedirTiempoEspera() {
+            int tiempo_espera = 0;
+            double tiempo = 0;
+            bool tiempoValido = false;
+
+            do {
+                system("cls");
+                cout << "\n        PUZZLE 8         \n";
+                cout << "\n------MODO INTELIGENTE-----\n";
+                cout << "Velocidad de la simulacion en segundos (entero, mayor a 0): ";
+                cin >> tiempo;
+                // Verificar entrada válida 
+                if (cin.fail()) { // Si la entrada no es un número
+			        cin.clear(); // Limpiar estado de error de cin 
+			        cin.ignore(1000,'\n'); // Descartar la entrada incorrecta hasta mil caracteres o hasta encontrar un salto de línea
+                    tiempo = 0;
+                }
+		        else if (fmod(tiempo,1) != 0) tiempo = 0 ; // Descartar números con decimales 
+		        else if (tiempo > 0) {
+                    tiempo_espera=static_cast<int>(tiempo);  // Convertir entrada a entero si es válida 
+                    tiempo_espera *= 1000;
+                    tiempoValido = true;
+                }
+
+            }while(!tiempoValido);
+
+            return tiempo_espera;
+        }
+
+        int cambiarTiempoEspera(int tiempoActual) {
+            char tecla = _getch();
+            if (tecla == -32 || tecla == 0) {
+                tecla = _getch();
+                // Flecha arriba aumenta velocidad (disminuye tiempo)
+                if (tecla == 72 && tiempoActual >= 1000) return (tiempoActual -  1000);
+
+                // Flecha abajo disminuye velocidad (aumenta tiempo)
+                if (tecla == 80) return (tiempoActual + 1000);
+            }
+            // Devolver el tiempo original si se presiona otra tecla 
+            return tiempoActual;
+        }
+
         bool verificarEspacios(vector<vector<int>> matriz) {
             vector<int> existentes;
             int revisados = 0;
@@ -532,6 +588,7 @@ class Puzzle{
             return true;
         }
 
+        //-----------FUNCIONES PARA MODO USUARIO-----------
         void menuModoUsuario(){
             float opc;
             int opcion;
@@ -547,13 +604,14 @@ class Puzzle{
                 cout << "\nElige una opcion: ";
                 cin >> opc;
 
-                if (cin.fail()){
-			        cin.clear();
-			        cin.ignore(1000,'\n');
+                // Verificar entrada válida 
+                if (cin.fail()) { // Si la entrada no es un número 
+			        cin.clear(); // Limpiar estado de error de cin 
+			        cin.ignore(1000,'\n'); // Descartar entrada incorrecta hasta mil caracteres o hasta salto de línea
                     opcion=500;
                 }
-		        else if (fmod(opc,1)!=0) opcion=500;
-		        else opcion=static_cast<int>(opc);
+		        else if (fmod(opc,1)!=0) opcion=500; // Descaratar números con decimales 
+		        else opcion=static_cast<int>(opc); // Convertir entrada a entero si es válida 
 
                 system("cls");
 
@@ -577,9 +635,12 @@ class Puzzle{
             bool salir = false;
 
             while (!esSolucion(tableroUsuario) && !salir) {
-                system("cls");
+                //system("cls");
                 cout << "Movimientos: " << movimientos << " | Puntaje: " << puntaje_acumulado << endl;
                 cout << "Nivel: " << nivel << endl;
+                int opcion = 0;
+                float opc = 0;
+                
                 mostrarTablero(tableroUsuario);
                 
                 vector<int> movimientosValidos = obtenerMovimientosValidos(tableroUsuario);
@@ -588,51 +649,54 @@ class Puzzle{
                 cout << endl;
                 
                 cout << "Opciones:\n";
-                cout << "1- Mover pieza\n";
-                cout << "2- Sugerir movimiento\n";
-                cout << "3- Salir\n";
+                cout << "(0-8)- Numero de la pieza a mover\n";
+                cout << "9- Sugerir movimiento\n";
+                cout << "10- Salir\n";
                 cout << "Elige una opcion: ";
                 
-                int opcion;
-                cin >> opcion;
+                cin >> opc;
+
+                // Verificar entrada válida 
+                if (cin.fail()) { // Si la entrada no es un número 
+			        cin.clear(); // Limpiar estado de error de cin 
+			        cin.ignore(1000,'\n'); // Descartar entrada incorrecta hasta mil caracteres o hasta salto de línea
+                    opcion=500;
+                }
+		        else if (fmod(opc,1)!=0) opcion=500; // Descaratar números con decimales 
+		        else opcion=static_cast<int>(opc); // Convertir entrada a entero si es válida 
                 
-                switch (opcion) {
-                    case 1: {
-                        cout << "Ingresa el numero a mover: ";
-                        int numero;
-                        cin >> numero;
-                        if (moverPieza(tableroUsuario, numero)) {
-                            movimientos++;
-                            puntaje_acumulado = totCorrectos(tableroUsuario);
-                        } else {
-                            cout << "Movimiento invalido!\n";
-                            system("pause");
-                        }
-                        break;
-                    }
-                    case 2: {
-                        int sugerencia = sugerirMovimiento(tableroUsuario);
-                        if (sugerencia != -1) {
-                            cout << "Sugerencia: mueve el numero " << sugerencia << endl;
-                        } else {
-                            cout << "No hay movimientos validos\n";
-                        }
+                if(opcion >= 0 && opcion <=8) {
+                    if (moverPieza(tableroUsuario, opcion)) {
+                        movimientos++;
+                        puntaje_acumulado = totCorrectos(tableroUsuario);
+                    } 
+                    else {
+                        cout << "Movimiento invalido!\n";
                         system("pause");
-                        break;
                     }
-                    case 3:
-                        salir = true;
-                        break;
-                    default:
+                }
+                else if (opcion == 9) {
+                    int sugerencia = sugerirMovimiento(tableroUsuario);
+                    if (sugerencia != -1) {
+                        cout << "Sugerencia: mueve el numero " << sugerencia << endl;
+                    } 
+                    else cout << "No hay movimientos validos\n";
+                    system("pause");
+                }
+                else if (opcion == 10) salir = true;
+                else {
                         cout << "Opcion invalida\n";
                         system("pause");
                 }
             }
             
+            system("cls");
+            mostrarTablero(tableroUsuario);
+            cout << endl;
+
             if (esSolucion(tableroUsuario)) {
                 cout << "Felicidades! Has resuelto el puzzle!\n";
                 cout << "Movimientos totales: " << movimientos << endl;
-                puntaje_acumulado += (100 - movimientos);
             }
             
             if (!salir) {
@@ -641,27 +705,27 @@ class Puzzle{
             
             Clase_Usuario us;
             us.mostrarPuntajes();
-            system("pause");
         }
 
         void generarNuevoJuego(int nivel) {
             // Estado final fijo
-            int contador = 1;
+            int contador = 0;
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
-                    estadoFinal[i][j] = contador % 9;
+                    if (i == 0 && j == 0) estadoFinal[i][j] = contador;
+                    else estadoFinal[i][j] = contador % 9;
                     contador++;
                 }
             }
-
+            
             // Generar estado inicial aleatorio
             vector<int> numeros = {0,1,2,3,4,5,6,7,8};
             random_shuffle(numeros.begin(), numeros.end());
             
-            int index = 0;
+            int indice = 0;
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
-                    estadoInicial[i][j] = numeros[index++];
+                    estadoInicial[i][j] = numeros[indice++];
                 }
             }
 
@@ -684,15 +748,13 @@ class Puzzle{
             int correctos = 0;
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
-                    if (tableroUsuario[i][j] == estadoFinal[i][j]) 
-                        correctos += 10;
+                    if (tableroUsuario[i][j] == estadoFinal[i][j]) correctos += 10;
                 }
             }
             return correctos;
         }
 
         void pedirDatosUsuario(int puntaje_acumulado) {
-            system("cls");
             char nombre[TAM];
             Clase_Usuario us; 
             
@@ -706,8 +768,11 @@ class Puzzle{
         }
     
         int cambiarNivel(int nivel_actual) {
-            return (nivel_actual == 1) ? 2 : 1;
+            if (nivel_actual == 1) return 2; // Si el nivel es 1, cambiar a 2 
+            return 1;                        // Si el nivel es 2, cambiar a 1
         }
+
+        //-----------OTRAS FUNCIONES-----------
 
         void limpiarMatrices() {
             for (int i = 0; i < 3; i++) {
@@ -724,28 +789,48 @@ class Puzzle{
                 cout << "MODO USUARIO------\n";
                 cout << "En este modo:\n";
                 cout << "- Se genera un tablero aleatorio\n";
-                cout << "- Debes ordenar los numeros del 1-8 con el 0 al final\n";
-                cout << "- Puedes mover piezas adyacentes al espacio vacio\n";
+                cout << "- Debes ordenar los numeros del 1-8 hasta obtener un tablero como el siguiente:\n";
+                int piezas = 0;
+                cout << "\t\t\t-------------\n";
+                for (int i = 0; i < 3; i++) {
+                    cout << "\t\t\t";
+                    cout << "| ";
+                    for (int j = 0; j < 3; j++) {
+                        if (piezas == 0) cout << "_ ";
+                        else cout << piezas << " ";
+                        cout << "| ";
+                        piezas++;
+                    }
+                    cout << "\n\t\t\t-------------\n";
+                }
+                cout << endl;
+                cout << "- Puedes mover piezas adyacentes al espacio vacio '_'\n";
                 cout << "- Ganas puntos por cada pieza en posicion correcta\n";
                 cout << "- Tienes sugerencias de movimientos\n";
+                cout << "- Tu puntaje va a depender del total de piezas que estan en su lugar (1 pieza correcta = 10 puntos)\n";
             } else {
                 cout << "MODO INTELIGENTE------\n";
                 cout << "En este modo:\n";
-                cout << "- Tu defines el estado inicial y final\n";
+                cout << "- Tu defines el estado inicial y final (meta) del puzzle\n";
                 cout << "- El programa resuelve el puzzle automaticamente\n";
-                cout << "- Usa el algoritmo A* con heuristica Manhattan\n";
                 cout << "- Muestra la solucion paso a paso\n";
+                cout << "- Puedes cambiar la velocidad de la simulacion:\n";
+                cout << "       - Flecha arriba para acelarar\n";
+                cout << "       - Flecha abajo para hacer mas lento\n";
             }
             system("pause");
+            system("cls");
         }
 
         void explicarJuego() {
             cout << "\n------PUZZLE 8-----\n";
-            cout << "El Puzzle 8 es un juego de deslizamiento donde debes ordenar\n";
-            cout << "los numeros del 1 al 8 en orden, dejando el espacio vacio (0)\n";
-            cout << "al final. Solo puedes mover piezas adyacentes al espacio vacio.\n";
+            cout << "El Puzzle 8 es un juego de deslizamiento donde se debe ordenar\n";
+            cout << "los numeros del 1 al 8 en orden, dejando el espacio vacio '_'\n";
+            cout << "al inicio. Solo se pueden mover piezas adyacentes al espacio vacio.\n";
             cout << "El objetivo es lograr la configuracion final en el menor numero\n";
-            cout << "de movimientos posible.\n";
+            cout << "de movimientos posible.\n\n";
+            cout << "En el modo usuario deberas llegar a la solucion clasica, pero en el\n";
+            cout << "modo inteligente tu decides cual sera la solucion (meta)\n";
             system("pause");
         }
 };
