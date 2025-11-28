@@ -1,14 +1,14 @@
 #include <iostream>
-#include <math.h>
-#include <stdlib.h>
-#include <ctime>
-#include <cctype>
-#include <windows.h>
-#include <conio.h>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <queue>
+#include <math.h>       // Uso de fmod() para validar entradas 
+#include <stdlib.h>     // Generación de alatorios
+#include <ctime>        // Gneración de aleatorios y manejo obtención de tiempo actual
+#include <cctype>   
+#include <windows.h>    // Uso de Sleep(), system() y colores 
+#include <conio.h>      // Captura de teclas de flecha 
+#include <fstream>      // Manejo de archicos 
+#include <string>       // Manejo de strings 
+#include <vector> 
+#include <queue> 
 #include <set>
 #include <map>
 #include <algorithm>
@@ -16,11 +16,12 @@
 
 using namespace std;
 
-#define TAM 50
+#define TAM 500 // Tamño maximo para cadena de nombre
 
-//-----------CLASE PARA MANEJO DE PUNTAJES-----------
+//-----------CLASE PARA MANEJO DE PUNTAJES (GUARDAR Y MOSTRAR EN EL ARCHIVO BINARIO)-----------
 class Clase_Usuario { 
     private:
+        // Datos del usuario para guardar en el archivo     
         struct Datos_Usuario {
             char nombreUsuario[TAM];
             int puntuacion;
@@ -41,38 +42,53 @@ class Clase_Usuario {
             bool existe = false;
             streampos posicion;
 
+            // Abrir archico para lectoescritura 
             puntajes.open("puntajes.dat", ios::binary | ios::in | ios::out);
 
+            // Si el archivo no existe, crearlo 
             if(!puntajes) {
                 puntajes.open("puntajes.dat", ios::binary | ios::out);
                 puntajes.close();
                 puntajes.open("puntajes.dat", ios::binary | ios::in | ios::out);
                 
+                // Verificar si se abrió el archivo correctamente 
                 if(!puntajes) {
                     cerr << "\nNo se pudo abrir el archivo para guardar puntajes\n";
                     return;
                 }
             }
 
+            // Buscar si el usuario ya existe (recorrer el archivo)
             while (puntajes.read(reinterpret_cast<char*>(&existente), sizeof(Datos_Usuario))) {
+                // Comparar los nombres registrados con el nuevo nombre 
                 if (strcmp(existente.nombreUsuario, nombre) == 0) {
                     existe = true;
+                    // Posición del registro a modificar = inicio de registro 
+                    // La lectura te deja al inicio del siguiente registro, 
+                    // puntajes.tellg() es esa posición menos el tamaño del registro = posición del regisrtro que se desea modificar  
                     posicion = puntajes.tellg() - streampos(sizeof(Datos_Usuario));
                     break;
                 }
             }
 
+            // Si el usuario ya existía 
             if (existe) {
+                // Sumar puntuación anteiror más la nueva
                 existente.puntuacion += puntaje;
+                // Actualizar la fecha a la fecha actual 
                 time_t hoy = time(0);
                 tm * timeinfo = localtime(&hoy);
                 existente.dia.dd = timeinfo->tm_mday; 
                 existente.dia.mm = timeinfo->tm_mon + 1; 
-                existente.dia.aa = 1900 + timeinfo->tm_year;
+                existente.dia.aa = 1900 + timeinfo->tm_year; 
                 
+                // Escribir los datos actulizados en el registro 
                 puntajes.seekp(posicion);
                 puntajes.write(reinterpret_cast<char*>(&existente), sizeof(Datos_Usuario));
-            } else {
+            } 
+            // Si es un nuevo usuario grabar los daros de manera normal 
+            else {
+                // Guardar los datos en nuevo
                 strcpy(nuevo.nombreUsuario, nombre);
                 nuevo.puntuacion = puntaje;
                 time_t hoy = time(0);
@@ -81,42 +97,49 @@ class Clase_Usuario {
                 nuevo.dia.mm = timeinfo->tm_mon + 1;
                 nuevo.dia.aa = 1900 + timeinfo->tm_year;
                 
-                puntajes.clear();
-                puntajes.seekp(0, ios::end);
-                puntajes.write(reinterpret_cast<char*>(&nuevo), sizeof(Datos_Usuario));
+                puntajes.clear(); // Limpiar posición del registro 
+                puntajes.seekp(0, ios::end);  // Posicionarse al final del registro 
+                puntajes.write(reinterpret_cast<char*>(&nuevo), sizeof(Datos_Usuario)); // Escribir los datos en el registro 
             }
-            puntajes.close();
+
+            puntajes.close(); // Cerrar archivo 
         }
 
         void mostrarPuntajes() {
             Datos_Usuario guardado;
             ifstream puntajes;
+
+            // Abrir archivo para lectura 
             puntajes.open("puntajes.dat", ios::binary | ios::in);
 
+            // Verificar si el archivo existe 
             if (!puntajes) {
                 cout << "\nNo hay puntajes guardados aún.\n";
+                system("pause");
                 return;
             }
 
-            puntajes.seekg(0, ios::end);
-            if (puntajes.tellg() == 0) {
+            // Verificar si el archivo está vaçío 
+            puntajes.seekg(0, ios::end); // Posicionarse al final del archivo 
+            if (puntajes.tellg() == 0) { // Si el tamaño al fianl del archivo es 0, entonces está vacío
                 cout << "\nNo hay puntajes guardados aún.\n";
                 puntajes.close();
                 return;
             }
-            puntajes.seekg(0, ios::beg);
+            puntajes.seekg(0, ios::beg); // Si no estaba vacío, volver al inicio del archivo 
 
             cout << "\n                PUZZLE 8         \n\n";
             cout << "------------------PUNTAJES------------------\n";
             cout << "Nombre\t\tPuntaje\tFecha\n";
             cout << "--------------------------------------------\n";
 
+            // Mostrar todos los puntajes guardados 
             while (puntajes.read(reinterpret_cast<char*>(&guardado), sizeof(Datos_Usuario))) {
                 cout << guardado.nombreUsuario << "\t\t" 
                      << guardado.puntuacion << "\t"  
                      << guardado.dia.dd << "/" << guardado.dia.mm << "/" << guardado.dia.aa << endl;
             }
-            puntajes.close();
+            puntajes.close(); // Cerrar archivo 
             cout << "\n--------------------------------------------\n";
 
             system("pause");
@@ -699,16 +722,15 @@ class Puzzle{
                 cout << "Movimientos totales: " << movimientos << endl;
             }
             
-            if (!salir) {
-                pedirDatosUsuario(puntaje_acumulado);
-            }
+            // Al usuario se le piden sus datos si termina el juego: salio o completó el puzzle 
+            pedirDatosUsuario(puntaje_acumulado);
             
             Clase_Usuario us;
             us.mostrarPuntajes();
         }
 
         void generarNuevoJuego(int nivel) {
-            // Estado final fijo
+            // Estado final fijo: números del 0-8 
             int contador = 0;
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
@@ -729,7 +751,7 @@ class Puzzle{
                 }
             }
 
-            // Para el nivel 1, asegurar que sea solucionable y mas facil
+            // Para el nivel 1, asegurar que sea solucionable y más facil
             if (nivel == 1) {
                 // Hacer algunos movimientos desde el estado final
                 estadoInicial = estadoFinal;
