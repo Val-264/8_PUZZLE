@@ -19,6 +19,9 @@ using namespace std;
 #define TAM 500 // Tamño maximo para cadena de nombre
 
 //-----------CLASE PARA MANEJO DE PUNTAJES (GUARDAR Y MOSTRAR EN EL ARCHIVO BINARIO)-----------
+/////////////////////
+// ARREGLAR: la fecha sale rara, ya no guarda dos jugadores 
+/// @brief /////////////
 class Clase_Usuario { 
     private:
         // Datos del usuario para guardar en el archivo     
@@ -150,45 +153,55 @@ class Clase_Usuario {
 class A_star {
     private:
         struct Nodo {
-            vector<vector<int>> estado;
-            int costo_g;
-            int costo_h;
-            int costo_f;
-            Nodo* padre;
+            vector<vector<int>> estado; // Estado actual del tablero: posición de las piezas 
+            int costo_g; // COSTO REAL para llegar desde el estado actual hasta el estado final 
+            int costo_h; // HUERÍSTICA:  estimación del costo para llegar del estado actual al estado final 
+            int costo_f; // Costo total del estimado de la solución .f(n) = g(n) + h(n), n es el estado actual 
+            Nodo* padre; // Nodo anteriro, para reconstruir el camino 
             
             Nodo(vector<vector<int>> e, int g, int h, Nodo* p = nullptr) 
                 : estado(e), costo_g(g), costo_h(h), padre(p) {
-                costo_f = costo_g + costo_h;
+                costo_f = costo_g + costo_h; // Calculo del costo total
             }
         };
         
         // Función de comparación para la priority_queue
         struct CompararNodo {
             bool operator()(const Nodo* a, const Nodo* b) const {
-                return a->costo_f > b->costo_f;
+                return a->costo_f > b->costo_f; // Para MIN_HEAP: menor costo primero 
             }
         };
         
-        vector<vector<int>> estadoFinal;
+        vector<vector<int>> estadoFinal; // Vector de estado final (meta del puzzle), aquí se copia el estado final 
         
+        // Calcular huerítica con distancia de Manhattan 
         int calcularHeuristica(const vector<vector<int>>& estado) {
-            int distancia = 0;
+            int distancia = 0; // Variable para almacenar la distancia de Manhattan
+
+            // Los dos primeros ciclos son para recorrer todas las posiciones del tablero actual 
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
-                    int valor = estado[i][j];
-                    if (valor != 0) {
-                        // Encontrar la posición objetivo de este valor
+                    int valor = estado[i][j]; // Valor en la posición actual del tablero a revisar 
+                    if (valor != 0) { // Si el valor no es el estado vacío(estado vacío no contribuye a la distancia)
+
+                        // Recorrer estadoFinal para encontrar la posición objetivo de este valor
                         for (int k = 0; k < 3; k++) {
                             for (int l = 0; l < 3; l++) {
                                 if (estadoFinal[k][l] == valor) {
+                                    // Distancia (h) = sumatoria de las distancias dde todas las piezas (|r - r\*| + |c - c\*|). 
+                                    // r,c = posición actual y r\*,c\* = posición objetivo 
+                                    // r = i, c = j, r\* = k, c\* = l
                                     distancia += abs(i - k) + abs(j - l);
-                                    break;
+                                    break; // Terminar si ya se calculó la distancai para una pieza (para buscar la siguiente)
                                 }
                             }
                         }
+
                     }
                 }
             }
+
+            // Regresar la distancia obtenida 
             return distancia;
         }
         
@@ -222,14 +235,22 @@ class A_star {
         }
         
     public:
-        A_star(vector<vector<int>> final) : estadoFinal(final) {}
+        A_star(vector<vector<int>> final) : estadoFinal(final) {} // Copiar estado final 
         
+        // Algorimo de A* (A star), devuelve un vector con las matrices del paso paso 
         vector<vector<vector<int>>> resolver(vector<vector<int>> estadoInicial) {
+            // Cola de proirdad a la frontera de búsqueda 
             priority_queue<Nodo*, vector<Nodo*>, CompararNodo> frontera;
+            // Set para evitar repeticiones 
             set<string> visitados;
             
+            // Calcular huerísitca inicial usando Distancia de Manhattan 
             int h_inicial = calcularHeuristica(estadoInicial);
+
+            // Crear nodo inicial 
             Nodo* nodoInicial = new Nodo(estadoInicial, 0, h_inicial);
+
+            // Agregar nodo inicail a la cola de prioridad 
             frontera.push(nodoInicial);
             visitados.insert(estadoAString(estadoInicial));
             
@@ -275,6 +296,8 @@ class A_star {
                     }
                 }
             }
+
+            // Retornar matriz vacía si no se encontró solución 
             return {};
         }
 };
@@ -282,9 +305,11 @@ class A_star {
 //-----------CLASE DE CONTROL DEL JUEGO-----------
 class Puzzle{
     private:
+        // Matrices para estado final e inicial, se usan en los dos modos de juego 
         vector<vector<int>> estadoInicial;
         vector<vector<int>> estadoFinal;
         
+        // Mostrar tablero para modo usuario 
         void mostrarTablero(const vector<vector<int>>& tablero) {
             cout << "\n-------------\n";
             for (int i = 0; i < 3; i++) {
@@ -295,6 +320,30 @@ class Puzzle{
                     cout << "| ";
                 }
                 cout << "\n-------------\n";
+            }
+        }
+
+        // Mostrar tablero para modo inteligente 
+        void mostrarTablero(const vector<vector<int>>& tablero, const vector<vector<int>>& meta) {
+            int f = 0; // Fila de la meta 
+            cout << "\n-------------\t\t-------------\n";
+            for (int i = 0; i < 3; i++) {
+                cout << "| ";
+                for (int j = 0; j < 3; j++) {
+                    if (tablero[i][j] == 0) cout << "_ ";
+                    else cout << tablero[i][j] << " ";
+                    cout << "| ";
+                    if (j == 2) {
+                        cout << "\t\t| ";
+                        for (int k = 0; k < 3; k++) {
+                            if (meta[f][k] == 0) cout << "_ ";
+                            else cout << meta[f][k] << " ";
+                            cout << "| ";
+                        }
+                        f++;
+                    }
+                }
+                cout << "\n-------------\t\t-------------\n";
             }
         }
         
@@ -350,7 +399,8 @@ class Puzzle{
             return -1;
         }
         
-    public:
+    public: 
+        // Crear e inicizalizar matrices de estado inicial y final 
         Puzzle(){
             estadoInicial.resize(3, vector<int>(3,0));
             estadoFinal.resize(3, vector<int>(3,0));
@@ -435,11 +485,16 @@ class Puzzle{
         }
 
         void jugarModoInteligente() {
-            capturarInicioFin();
+            // Capturar estado de inicial y final (meta) del puzzle
+            capturarInicioFin();  
+
+            // Copiar el tablero incial ingresado por el usuario para el estado inical del modo inteligente 
             vector<vector<int>> tableroInteligente = estadoInicial;
 
+            // Buscar si existe una solución para los estados incial y final ingresados por el usuario
             cout << "Buscando si existe solucion...\n";
             A_star a(estadoFinal);
+            // Vector que guarda las matrices con el paso a paso para llegar a la solución 
             vector<vector<vector<int>>> solucion = a.resolver(estadoInicial);
 
             if (solucion.empty()) {
@@ -451,6 +506,7 @@ class Puzzle{
             // Pedir el tiempo de espera para mostrar el paso a paso en segundos 
             int tiempo_espera = pedirTiempoEspera();
 
+            // Mostrar solución encontrada 
             for (size_t paso = 0; paso < solucion.size(); paso++) {
                 // La velociad se puede cambiar durante la ejecucuión 
                 if (_kbhit()) tiempo_espera = cambiarTiempoEspera(tiempo_espera); 
@@ -459,8 +515,9 @@ class Puzzle{
                 cout << "\n        PUZZLE 8         \n";
                 cout << "\n------MODO INTELIGENTE-----\n";
                 cout << "Velocidad: " << tiempo_espera/1000 << " segundos" << endl;
-                cout << "Paso " << paso + 1 << " de " << solucion.size() << ":\n";
-                mostrarTablero(solucion[paso]);
+                cout << "Paso " << paso + 1 << " de " << solucion.size() << "\t\t";
+                cout << "Meta a alcanzar\n";
+                mostrarTablero(solucion[paso], estadoFinal);
                 if (paso < solucion.size() - 1) {
                     Sleep(tiempo_espera);
                 }
@@ -469,15 +526,17 @@ class Puzzle{
             system("pause");
         }
 
+        // Capturar estado inicial y final (meta) del puzzle, el usuario lo ingresa 
         void capturarInicioFin() {
-            bool pantallaLimpia = false;
-            bool matrizValida = false;
+            bool pantallaLimpia = false; // Limpiar pantalla en caso de una entrada inválida 
+            bool matrizValida = false;   // Condición de finalización de los ciclos do-while (termian si la entrada para la matriz es válida)
 
             cout << "\n        PUZZLE 8         \n";
             cout << "\n------MODO INTELIGENTE-----";
             cout << "\nIngresa los numeros para el estado inicial y final (solucion) del juego";
             cout << "\nDeben ser numeros entre 0 y 8 y ninguno debe repetirse\n";
 
+            // Capturar el estado inicial del puzzle 
             do{
                 if (pantallaLimpia) {
                     cout << "\n        PUZZLE 8         \n";
@@ -493,14 +552,17 @@ class Puzzle{
                     }
                 }
 
-                if (!verificarEspacios(estadoInicial)) {
+                // ¿Entrada para estado inicial válida?
+                if (!verificarEspacios(estadoInicial)) { // ¿Entrada para estado inicial válida?
                     cout << "Intenta de nuevo\n";
                     system("pause");
                     system("cls");
                     pantallaLimpia = true;
                 }
+
+                // Si la entrada fue válida
                 else {
-                    pantallaLimpia = false;
+                    pantallaLimpia = true;
                     matrizValida = true;
                 }
             }while(!matrizValida);
@@ -528,15 +590,28 @@ class Puzzle{
                     }
                 }
 
-                if (!verificarEspacios(estadoFinal)) {
+                // ¿Entrada para estado final (meta) válida?
+                if (!verificarEspacios(estadoFinal)) { 
                     cout << "Intenta de nuevo\n";
                     system("pause");
                     system("cls");
                     pantallaLimpia = true;
                 }
+
+                // La matriz inicial y final no pueden ser iguales porque entonces no hay nada para resolver
+                else if (estadoFinal == estadoInicial) {  
+                    cout << "El estado final no puede ser igual al estado incial\n";
+                    cout << "Intenta de nuevo\n";
+                    system("pause");
+                    system("cls");
+                    pantallaLimpia = true;
+                }
+
+                // Si la entrada fue válida 
                 else {
                     pantallaLimpia = false;
                     matrizValida = true;
+                    system("cls");
                 }
             }while(!matrizValida);
         }
