@@ -18,10 +18,6 @@ using namespace std;
 
 #define TAM 500 // Tamño maximo para cadena de nombre
 
-//-----------CLASE PARA MANEJO DE PUNTAJES (GUARDAR Y MOSTRAR EN EL ARCHIVO BINARIO)-----------
-/////////////////////
-// ARREGLAR: la fecha sale rara, ya no guarda dos jugadores 
-/// @brief /////////////
 class Clase_Usuario { 
     private:
         // Datos del usuario para guardar en el archivo     
@@ -40,7 +36,7 @@ class Clase_Usuario {
         Clase_Usuario(){}
         
         void guardarNombrePuntaje(char nombre[TAM], int puntaje) {
-            Datos_Usuario nuevo, existente;
+            Datos_Usuario nuevo = {}, existente = {};
             fstream puntajes;
             bool existe = false;
             streampos posicion;
@@ -91,6 +87,8 @@ class Clase_Usuario {
             } 
             // Si es un nuevo usuario grabar los daros de manera normal 
             else {
+                // Inicializar al nuevo
+                memset(&nuevo, 0, sizeof(Datos_Usuario)); // Limpiar estructura
                 // Guardar los datos en nuevo
                 strcpy(nuevo.nombreUsuario, nombre);
                 nuevo.puntuacion = puntaje;
@@ -109,7 +107,7 @@ class Clase_Usuario {
         }
 
         void mostrarPuntajes() {
-            Datos_Usuario guardado;
+            Datos_Usuario guardado = {};
             ifstream puntajes;
 
             // Abrir archivo para lectura 
@@ -138,10 +136,12 @@ class Clase_Usuario {
 
             // Mostrar todos los puntajes guardados 
             while (puntajes.read(reinterpret_cast<char*>(&guardado), sizeof(Datos_Usuario))) {
+                if(guardado.nombreUsuario[0] != '\0') {
                 cout << guardado.nombreUsuario << "\t\t" 
                      << guardado.puntuacion << "\t"  
                      << guardado.dia.dd << "/" << guardado.dia.mm << "/" << guardado.dia.aa << endl;
-            }
+                    }
+                }
             puntajes.close(); // Cerrar archivo 
             cout << "\n--------------------------------------------\n";
 
@@ -472,7 +472,7 @@ class Puzzle{
                 system("cls");
 
                 switch (opcion){
-                    case 1: verEspecificaciones('i'); break;
+                    case 1: explicarJuego('i'); break;
                     case 2: jugarModoInteligente(); break;
                     case 0: cout<<"Saliendo...";
                     default: cout<<"Opcion invalida\n";
@@ -507,13 +507,32 @@ class Puzzle{
             int tiempo_espera = pedirTiempoEspera();
 
             // Mostrar solución encontrada 
+            bool salir = false;
             for (size_t paso = 0; paso < solucion.size(); paso++) {
-                // La velociad se puede cambiar durante la ejecucuión 
-                if (_kbhit()) tiempo_espera = cambiarTiempoEspera(tiempo_espera); 
+                // Capturar tecla  
+                if (_kbhit()) {
+                    char tecla = _getch();
+
+                    // Salir: dejar de ver la solución 
+                    if (tecla == '1') {
+                        salir = true;
+                        break;
+                    }
+
+                    // Ver espicificaiones del modo usuario 
+                    else if (tecla == '2') {
+                        system("cls");
+                        explicarJuego('i');
+                    }
+
+                    // Cambiar la velocidad 
+                    else if (tecla == -32 || tecla == 0) tiempo_espera = cambiarTiempoEspera(tiempo_espera); 
+                }
 
                 system("cls");
                 cout << "\n        PUZZLE 8         \n";
                 cout << "\n------MODO INTELIGENTE-----\n";
+                cout << "Salir: 1 \t\tVer especificaiones: 2" << endl;
                 cout << "Velocidad: " << tiempo_espera/1000 << " segundos" << endl;
                 cout << "Paso " << paso + 1 << " de " << solucion.size() << "\t\t";
                 cout << "Meta a alcanzar\n";
@@ -522,8 +541,10 @@ class Puzzle{
                     Sleep(tiempo_espera);
                 }
             }
-            cout << "\nPuzzle resuelto!\n";
-            system("pause");
+            if (!salir) {
+                cout << "\nPuzzle resuelto!\n";
+                system("pause");
+            }
         }
 
         // Capturar estado inicial y final (meta) del puzzle, el usuario lo ingresa 
@@ -562,6 +583,7 @@ class Puzzle{
 
                 // Si la entrada fue válida
                 else {
+                    system("cls");
                     pantallaLimpia = true;
                     matrizValida = true;
                 }
@@ -647,14 +669,13 @@ class Puzzle{
 
         int cambiarTiempoEspera(int tiempoActual) {
             char tecla = _getch();
-            if (tecla == -32 || tecla == 0) {
-                tecla = _getch();
-                // Flecha arriba aumenta velocidad (disminuye tiempo)
-                if (tecla == 72 && tiempoActual >= 1000) return (tiempoActual -  1000);
+                
+            // Flecha arriba aumenta velocidad (disminuye tiempo)
+            if (tecla == 72 && tiempoActual >= 1000) return (tiempoActual -  1000);
 
-                // Flecha abajo disminuye velocidad (aumenta tiempo)
-                if (tecla == 80) return (tiempoActual + 1000);
-            }
+            // Flecha abajo disminuye velocidad (aumenta tiempo)
+            if (tecla == 80) return (tiempoActual + 1000);
+
             // Devolver el tiempo original si se presiona otra tecla 
             return tiempoActual;
         }
@@ -714,7 +735,7 @@ class Puzzle{
                 system("cls");
 
                 switch (opcion){
-                    case 1: verEspecificaciones('u'); break;
+                    case 1: explicarJuego('u'); break;
                     case 2: nivel = cambiarNivel(nivel); break;
                     case 3: jugarModoUsuario(nivel); break;
                     case 0: cout<<"Saliendo...";
@@ -733,7 +754,10 @@ class Puzzle{
             bool salir = false;
 
             while (!esSolucion(tableroUsuario) && !salir) {
-                //system("cls");
+                system("cls");
+                if (movimientos !=0) puntaje_acumulado = totCorrectos(tableroUsuario);
+                cout << "\n        PUZZLE 8         \n";
+                cout << "\n------MODO USUARIO-----\n";
                 cout << "Movimientos: " << movimientos << " | Puntaje: " << puntaje_acumulado << endl;
                 cout << "Nivel: " << nivel << endl;
                 int opcion = 0;
@@ -750,6 +774,7 @@ class Puzzle{
                 cout << "(0-8)- Numero de la pieza a mover\n";
                 cout << "9- Sugerir movimiento\n";
                 cout << "10- Salir\n";
+                cout << "11- Ver especificaciones\n";
                 cout << "Elige una opcion: ";
                 
                 cin >> opc;
@@ -782,13 +807,19 @@ class Puzzle{
                     system("pause");
                 }
                 else if (opcion == 10) salir = true;
+                else if (opcion == 11) {
+                    system("cls");
+                    explicarJuego('u');
+                }
                 else {
-                        cout << "Opcion invalida\n";
-                        system("pause");
+                    cout << "Opcion invalida\n";
+                    system("pause");
                 }
             }
             
             system("cls");
+            cout << "\n        PUZZLE 8         \n";
+            cout << "\n------MODO USUARIO-----\n";
             mostrarTablero(tableroUsuario);
             cout << endl;
 
@@ -797,11 +828,12 @@ class Puzzle{
                 cout << "Movimientos totales: " << movimientos << endl;
             }
             
-            // Al usuario se le piden sus datos si termina el juego: salio o completó el puzzle 
+            // Al usuario se le piden sus datos si termina el juego: salió o completó el puzzle 
             pedirDatosUsuario(puntaje_acumulado);
             
             Clase_Usuario us;
             us.mostrarPuntajes();
+            system("cls");
         }
 
         void generarNuevoJuego(int nivel) {
@@ -880,7 +912,8 @@ class Puzzle{
             }            
         }
 
-        void verEspecificaciones(char modo) {
+        // Ver especificaciones del modo usauriio y del modo inteligente 
+        void explicarJuego(char modo) {
             cout << "\n------ESPECIFICACIONES ";
             if (modo == 'u') {
                 cout << "MODO USUARIO------\n";
@@ -905,6 +938,7 @@ class Puzzle{
                 cout << "- Ganas puntos por cada pieza en posicion correcta\n";
                 cout << "- Tienes sugerencias de movimientos\n";
                 cout << "- Tu puntaje va a depender del total de piezas que estan en su lugar (1 pieza correcta = 10 puntos)\n";
+                cout << "  Si no has realizado ningun movimiento tu puntaje sera 0\n";
             } else {
                 cout << "MODO INTELIGENTE------\n";
                 cout << "En este modo:\n";
