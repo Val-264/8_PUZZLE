@@ -346,32 +346,7 @@ class Puzzle{
                 cout << "\n-------------\t\t-------------\n";
             }
         }
-        
-        bool esSolucion(const vector<vector<int>>& tablero) {
-            return tablero == estadoFinal;
-        }
-        
-        vector<int> obtenerMovimientosValidos(const vector<vector<int>>& tablero) {
-            vector<int> movimientos;
-            pair<int, int> posCero;
-            for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                    if (tablero[i][j] == 0) {
-                        posCero = {i, j};
-                        break;
-                    }
-                }
-            }
-            
-            int i = posCero.first, j = posCero.second;
-            if (i > 0) movimientos.push_back(tablero[i-1][j]);
-            if (i < 2) movimientos.push_back(tablero[i+1][j]);
-            if (j > 0) movimientos.push_back(tablero[i][j-1]);
-            if (j < 2) movimientos.push_back(tablero[i][j+1]);
-            
-            return movimientos;
-        }
-        
+                        
         bool moverPieza(vector<vector<int>>& tablero, int numero) {
             pair<int, int> posCero, posNumero;
             for (int i = 0; i < 3; i++) {
@@ -390,15 +365,7 @@ class Puzzle{
             }
             return false;
         }
-        
-        int sugerirMovimiento(const vector<vector<int>>& tablero) {
-            vector<int> movimientos = obtenerMovimientosValidos(tablero);
-            if (!movimientos.empty()) {
-                return movimientos[0];
-            }
-            return -1;
-        }
-        
+                
     public: 
         // Crear e inicizalizar matrices de estado inicial y final 
         Puzzle(){
@@ -711,7 +678,7 @@ class Puzzle{
         void menuModoUsuario(){
             float opc;
             int opcion;
-            int nivel = 1;
+            int nivel = 1; // El nivel por default es 1
 
             do{
                 cout << "\n        PUZZLE 8         \n\n";
@@ -727,7 +694,7 @@ class Puzzle{
                 if (cin.fail()) { // Si la entrada no es un número 
 			        cin.clear(); // Limpiar estado de error de cin 
 			        cin.ignore(1000,'\n'); // Descartar entrada incorrecta hasta mil caracteres o hasta salto de línea
-                    opcion=500;
+                    opcion = 500;
                 }
 		        else if (fmod(opc,1)!=0) opcion=500; // Descaratar números con decimales 
 		        else opcion=static_cast<int>(opc); // Convertir entrada a entero si es válida 
@@ -742,20 +709,26 @@ class Puzzle{
                     default: cout<<"Opcion invalida\n";
                 }
 
+                // Limpiar matrices de estado antes de un nuevo juego
                 if(opcion == 3) limpiarMatrices();
             }while(opcion!=0);            
         }
 
         void jugarModoUsuario(int nivel) {
-            generarNuevoJuego(nivel);
-            vector<vector<int>> tableroUsuario = estadoInicial;
-            int movimientos = 0;
+            generarNuevoJuego(nivel); // Generar tableros para nuevo juego 
+            vector<vector<int>> tableroUsuario = estadoInicial; // El tablero del usuario empiza en el estado inicial
+            int movimientos = 0; // Total de movimientos realizados por el usuario para llegar al estado final 
             int puntaje_acumulado = 0;
             bool salir = false;
 
-            while (!esSolucion(tableroUsuario) && !salir) {
+            // El usuario juega hasta que encuentra la solución o hasta que decide salir 
+            while (!esSolucion(tableroUsuario) && !salir) { 
                 system("cls");
+
+                // El total de puntos es igual al total de piezas en su posición correcta * 10 
+                // Se asigna puntaje a partir del primer movimiento 
                 if (movimientos !=0) puntaje_acumulado = totCorrectos(tableroUsuario);
+
                 cout << "\n        PUZZLE 8         \n";
                 cout << "\n------MODO USUARIO-----\n";
                 cout << "Movimientos: " << movimientos << " | Puntaje: " << puntaje_acumulado << endl;
@@ -765,6 +738,7 @@ class Puzzle{
                 
                 mostrarTablero(tableroUsuario);
                 
+                // Vector de piezas que pueden ser movidas (son las adyacentes al espacio vacío)
                 vector<int> movimientosValidos = obtenerMovimientosValidos(tableroUsuario);
                 cout << "Movimientos validos: ";
                 for (int num : movimientosValidos) cout << num << " ";
@@ -873,6 +847,36 @@ class Puzzle{
             }
         }
 
+        // Comparar estado actual del tablero con la meta 
+        bool esSolucion(const vector<vector<int>>& tablero) {
+            return tablero == estadoFinal;
+        }
+
+        // Función para obtener las piezas que son adyacentes al espaco vacío
+        vector<int> obtenerMovimientosValidos(const vector<vector<int>>& tablero) {
+            vector<int> movimientos;
+            pair<int, int> posCero;
+
+            // Ubicar la posición del estado vació (0) en el tablero 
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    if (tablero[i][j] == 0) {
+                        posCero = {i, j};
+                        break;
+                    }
+                }
+            }
+            
+            // Agregar al vector de movimientos las piezas adyacentes al cero 
+            int i = posCero.first, j = posCero.second;
+            if (i > 0) movimientos.push_back(tablero[i-1][j]);
+            if (i < 2) movimientos.push_back(tablero[i+1][j]);
+            if (j > 0) movimientos.push_back(tablero[i][j-1]);
+            if (j < 2) movimientos.push_back(tablero[i][j+1]);
+            
+            return movimientos; // Regresar los movimientos válidos encontrados 
+        }
+
         int totCorrectos(vector<vector<int>> tableroUsuario) {
             int correctos = 0;
             for (int i = 0; i < 3; i++) {
@@ -899,6 +903,58 @@ class Puzzle{
         int cambiarNivel(int nivel_actual) {
             if (nivel_actual == 1) return 2; // Si el nivel es 1, cambiar a 2 
             return 1;                        // Si el nivel es 2, cambiar a 1
+        }
+
+        int sugerirMovimiento(const vector<vector<int>>& tablero) {
+
+            vector<int> movimientosValidos = obtenerMovimientosValidos(tablero);
+            if (movimientosValidos.empty()) return -1;
+    
+            int piezasCorrectas = contarPiezasCorrectas(tablero);
+    
+            if (piezasCorrectas <= 3) {
+                // Priorizar primera fila y primera columna
+                for (int num : movimientosValidos) {
+                    if ((tablero[0][0] == num || tablero[0][1] == num || tablero[0][2] == num ||
+                        tablero[1][0] == num || tablero[2][0] == num) &&
+                        calcularDistanciaManhattan(num, tablero) > 0) {
+                        return num;
+                    }
+                }
+            }
+            
+            return movimientosValidos[0]; 
+        }
+
+        //---------Funciones auxiliares para sugerir movimiento----------
+        int contarPiezasCorrectas(vector<vector<int>> tablero) {
+            int contador = 0;
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    if (tablero[i][j] == estadoFinal[i][j]) {
+                        contador++;
+                    }
+                }
+            }
+            return contador;
+        }
+
+        int calcularDistanciaManhattan (int num, vector<vector<int>> tablero) {
+            pair<int,int> posActual, posObjetivo;
+
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    if (tablero[i][j] == num) {
+                        posActual = {i,j};
+                    }
+                    if (estadoFinal[i][j] == num) {
+                        posObjetivo = {i,j};
+                    }
+                }
+            }
+
+            // Distancia de Manhattan
+            return abs(posActual.first - posObjetivo.first) + abs(posActual.second - posObjetivo.second);
         }
 
         //-----------OTRAS FUNCIONES-----------
@@ -953,6 +1009,7 @@ class Puzzle{
             system("cls");
         }
 
+        // Explicaicón general del juego 
         void explicarJuego() {
             cout << "\n------PUZZLE 8-----\n";
             cout << "El Puzzle 8 es un juego de deslizamiento donde se debe ordenar\n";
