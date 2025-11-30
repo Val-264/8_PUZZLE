@@ -46,7 +46,55 @@ class Clase_Usuario {
             }; 
             Fecha dia;
         };
-        
+
+        void ordenar_por_puntaje() {
+            fstream puntajes;
+            Datos_Usuario actual;
+            vector<Datos_Usuario> usuarios;
+
+            //Abrir archivo para lectura 
+            puntajes.open("puntajes.dat", ios::binary | ios::in);
+            
+            // Verificar si se pudo abrir el archivo 
+            if (!puntajes) {
+                cout << "\nNo se pudo abrir el archivo para guardar puntajes.\n";
+                system("pause");
+                system("cls");
+                return;
+            }
+
+            // Extraer a los usuarios registrados y ponerlos en un vector 
+            while (puntajes.read(reinterpret_cast<char*>(&actual), sizeof(Datos_Usuario))) {
+                usuarios.push_back(actual);
+            }
+
+            puntajes.close(); // Cerrar después de lectura 
+            
+            // Acomodar por puntajes de mayor a menor 
+            sort(usuarios.begin(), usuarios.end(), [](const Datos_Usuario& a, const Datos_Usuario& b) {
+                return a.puntuacion > b.puntuacion;
+            });
+
+            // Abrir archivo para escritura 
+            puntajes.open("puntajes.dat", ios::binary | ios::out | ios::trunc);
+
+            // Verificar si se pudo abrir el archivo 
+            if (!puntajes) {
+                cout << "\nNo se pudo abrir el archivo para guardar puntajes.\n";
+                system("pause");
+                system("cls");
+                return;
+            }
+
+            // Grabar en el archivo los datos acomodados 
+            for (size_t i = 0; i < usuarios.size(); i++) {
+                puntajes.write(reinterpret_cast<char*>(&usuarios[i]), sizeof(Datos_Usuario));
+                
+            }
+
+            puntajes.close(); // Cerrar archivo 
+        }
+
     public:
         Clase_Usuario(){}
         
@@ -128,6 +176,8 @@ class Clase_Usuario {
             }
 
             puntajes.close(); // Cerrar archivo 
+
+            ordenar_por_puntaje();
         }
 
         // Muestra todos los datos guardados en el archivo 
@@ -870,8 +920,8 @@ class Puzzle{
                 cout << "Movimientos totales: " << movimientos << endl;
             }
             
-            // Guardar datos de usuario 
-            pedirDatosUsuario(puntaje_acumulado);
+            // Guardar datos de usuario solo si hizo por lo menos un movimiento 
+            if (movimientos > 0)pedirDatosUsuario(puntaje_acumulado);
             
             // Mostrar tabla de puntajes 
             Clase_Usuario us;
