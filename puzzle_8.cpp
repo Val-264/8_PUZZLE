@@ -6,7 +6,7 @@
 - Danna Sofía Morales Esparza   ID: 550210
 
       -----------MATERIA-----------
-- Materia: Estrictura de Datos II
+- Materia: Estructura de Datos II
 - Profesor: Eduardo Serna Pérez 
 
 */
@@ -17,11 +17,11 @@
 #include <stdlib.h>     // Generación de alatorios (rand() y srand())
 #include <ctime>        // Manejo de tiempo para aleatorios y obtención de tiempo actual
 #include <cctype>       // Funciones para manejo de caracteres  
-#include <windows.h>    // Uso de Sleep(), system("cls"), systen("pause") 
+#include <windows.h>    // Uso de Sleep(), system("cls"), system("pause") 
 #include <conio.h>      // Captura de teclas especiales 
 #include <fstream>      // Manejo de archivos para guardar puntajes 
 #include <string>       // Manejo de cadenas de texto
-#include <vector>       // Estructura de datos vector para vecotes y matrices 
+#include <vector>       // Estructura de datos vector para vectores y matrices 
 #include <queue>        // Colas de prioridad para algoritmo A* (A star)
 #include <set>          // Conjunto para evitar datos repetidos en A*
 #include <map>          // Mapa para estructuras de datos auxiliares 
@@ -254,7 +254,7 @@ class A_star {
         vector<vector<int>> estadoFinal; // Vector de estado final (meta del puzzle), aquí se copia el estado final 
         
         /*
-        Calcular huerítica con distancia de Manhattan
+        Calcular huerítica con distancia de Manhattan 
         @param estado: estado actual del tablero 
         @return distacia: suma de distancia de Manhattan de todas las piezas 
         */  
@@ -289,7 +289,7 @@ class A_star {
         }
         
         /*
-        Encontrar posición del estdo vacío 
+        Encontrar posición del estado vacío 
         @param estado: estado del tablero actual 
         @return pair(fila, columna) del espacio vacío 
         */
@@ -299,12 +299,13 @@ class A_star {
                     if (estado[i][j] == 0) return {i, j};
                 }
             }
+            return {-1,-1};
         }
         
         /*
         Hacer copia del estado actual del tablero 
         @param estado: estado a copiar 
-        @return nueva matriz con los mismos valores del estado actual 
+        @return copia: nueva matriz con los mismos valores del estado actual 
         */
         vector<vector<int>> copiarEstado(const vector<vector<int>>& estado) {
             vector<vector<int>> copia(3, vector<int>(3));
@@ -330,12 +331,37 @@ class A_star {
             }
             return s;
         }
-        
+
+        /*
+        Calcular la distancia de Manhattan de una pieza específica
+        @param num: número de la pieza
+        @param estado: estado actual del tablero
+        @return distancia de Manhattan de la pieza a su posición objetivo
+        */
+        int calcularDistanciaManhattan(int num, const vector<vector<int>>& estado) {
+            pair<int,int> posActual, posObjetivo;
+
+            // Encontrar posición actual y objetivo de la pieza
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    if (estado[i][j] == num) {
+                        posActual = {i,j};
+                    }
+                    if (estadoFinal[i][j] == num) {
+                        posObjetivo = {i,j};
+                    }
+                }
+            }
+
+            // Calcular distancia de Manhattan
+            return abs(posActual.first - posObjetivo.first) + abs(posActual.second - posObjetivo.second);
+        }
+
     public:
         A_star(vector<vector<int>> final) : estadoFinal(final) {} // Copiar estado final 
         
         /* 
-        Algorimo de A* (A star) 
+        Algorimo de A* (A star) usadoen modo inteligente 
         @param  estadoInicial: estado inicial del puzzle desde el que se va a comnezar a resolver
         @return camino: vector con otodos los estados desde el inicio hasta el final 
         */
@@ -411,8 +437,68 @@ class A_star {
                 }
             }
 
+
+            // Limpiar memoria de todos los nodos en la fontera 
+            while (!frontera.empty()) {
+                delete frontera.top();
+                frontera.pop();
+            }
+
             // Retornar vector vacío si no se encontró solución 
             return {};
+        }
+
+        /*
+        Sugerir movimiento usando algoritmo A* 
+        @param tablero: estado actual del tablero
+        @param movimientosValidos: movimientos posibles desde el estado actual
+        @return mejor número a mover según A*
+        */
+        int sugerirMovimiento(const vector<vector<int>>& tablero, const vector<int>& movimientosValidos) {
+            // Si hay pocos movimientos válidos, usar lógica simple
+            if (movimientosValidos.size() == 1) {
+                return movimientosValidos[0];
+            }
+    
+            int mejorMovimiento = -1;
+            int mejorHeuristica = 9999; // Valor alto inicial
+    
+            // Probar cada movimiento válido y evaluar con heurística de Manhattan
+            for (int num : movimientosValidos) {
+                // Crear copia del tablero para simular el movimiento
+                vector<vector<int>> tableroSimulado = tablero;
+        
+                // Encontrar posiciones del cero y del número
+                pair<int, int> posCero, posNum;
+                for (int i = 0; i < 3; i++) {
+                    for (int j = 0; j < 3; j++) {
+                        if (tableroSimulado[i][j] == 0) posCero = {i, j};
+                        if (tableroSimulado[i][j] == num) posNum = {i, j};
+                    }
+                }
+        
+                // Simular el movimiento
+                swap(tableroSimulado[posCero.first][posCero.second], 
+                tableroSimulado[posNum.first][posNum.second]);
+        
+                // Calcular heurística para este estado
+                int heuristica = calcularHeuristica(tableroSimulado);
+        
+                // Si esta heurística es mejor, actualizar el mejor movimiento
+                if (heuristica < mejorHeuristica) {
+                    mejorHeuristica = heuristica;
+                    mejorMovimiento = num;
+                }
+                // Si hay empate, elegir el que reduce más la distancia
+                else if (heuristica == mejorHeuristica) {
+                    int distanciaActual = calcularDistanciaManhattan(num, tablero);
+                    if (distanciaActual > 0) { // Si el movimiento acerca la pieza a su posición
+                        mejorMovimiento = num;
+                    }
+                }
+            }
+    
+            return (mejorMovimiento != -1) ? mejorMovimiento : movimientosValidos[0];
         }
 };
 
@@ -441,7 +527,7 @@ class Puzzle{
                 cout << "\n0- Salir";
                 cout << "\n1- Modo inteligente";
                 cout << "\n2- Modo usuario"; 
-                cout << "\n3- Explicaion del juego"; 
+                cout << "\n3- Explicacion del juego"; 
                 cout << "\n4- Ver puntajes de los jugadores";
                 cout << "\nElige una opcion: ";
                 cin >> opc;
@@ -697,6 +783,7 @@ class Puzzle{
                     tiempo_espera *= 1000; // Coveritr a milisegundos (Sleep() usa milisegundos)
                     tiempoValido = true;
                 }
+                else tiempo = 0;
 
             }while(!tiempoValido);
 
@@ -836,6 +923,7 @@ class Puzzle{
             int movimientos = 0; // Total de movimientos realizados por el usuario para llegar al estado final 
             int puntaje_acumulado = 0;
             bool salir = false;
+            A_star a(estadoFinal);
 
             // El usuario juega hasta que encuentra la solución o hasta que decide salir 
             while (!esSolucion(tableroUsuario) && !salir) { 
@@ -878,7 +966,7 @@ class Puzzle{
 		        else if (fmod(opc,1)!=0) opcion=500; // Descaratar números con decimales 
 		        else opcion=static_cast<int>(opc); // Convertir entrada a entero si es válida 
                 
-                // Porcesar opción seleccionada 
+                // Procesar opción seleccionada 
                 if(opcion >= 0 && opcion <=8) {
                     if (moverPieza(tableroUsuario, opcion)) {
                         movimientos++;
@@ -890,7 +978,7 @@ class Puzzle{
                     }
                 }
                 else if (opcion == 9) {
-                    int sugerencia = sugerirMovimiento(tableroUsuario);
+                    int sugerencia = a.sugerirMovimiento(tableroUsuario, obtenerMovimientosValidos(tableroUsuario));
                     if (sugerencia != -1) {
                         cout << "Sugerencia: mueve el numero " << sugerencia << endl;
                     } 
@@ -938,8 +1026,7 @@ class Puzzle{
             int contador = 0;
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
-                    if (i == 0 && j == 0) estadoFinal[i][j] = contador;
-                    else estadoFinal[i][j] = contador % 9;
+                    estadoFinal[i][j] = contador;
                     contador++;
                 }
             }
@@ -1092,74 +1179,6 @@ class Puzzle{
             return 1;                        // Si el nivel es 2, cambiar a 1
         }
 
-        /* 
-        Sugerir al usuario qué pieza mover 
-        @param tablero: estado actual del tablero 
-        @return numero de la pieza a mover 
-        */
-        int sugerirMovimiento(const vector<vector<int>>& tablero) {
-
-            vector<int> movimientosValidos = obtenerMovimientosValidos(tablero);
-            if (movimientosValidos.empty()) return -1;
-    
-            int piezasCorrectas = contarPiezasCorrectas(tablero);
-    
-            if (piezasCorrectas <= 3) {
-                // Priorizar primera fila y primera columna
-                for (int num : movimientosValidos) {
-                    if ((tablero[0][0] == num || tablero[0][1] == num || tablero[0][2] == num ||
-                        tablero[1][0] == num || tablero[2][0] == num) &&
-                        calcularDistanciaManhattan(num, tablero) > 0) {
-                        return num;
-                    }
-                }
-            }
-            
-            return movimientosValidos[0]; 
-        }
-
-        /*
-        Contar las piezas que están en su posición correcta 
-        @param tablero: estado actual del tablero 
-        @return contador: total de piezas en su posición correcta  
-        */
-        int contarPiezasCorrectas(vector<vector<int>> tablero) {
-            int contador = 0;
-            for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                    if (tablero[i][j] == estadoFinal[i][j]) {
-                        contador++;
-                    }
-                }
-            }
-            return contador;
-        }
-
-        /*
-        Calcular la distancia de Manhattan de una pieza específica 
-        @param num: número del que se calculará la distancia
-        @param tablero: estado actual del tablero 
-        return distancia de Manhattan calculada 
-        */
-        int calcularDistanciaManhattan (int num, vector<vector<int>> tablero) {
-            pair<int,int> posActual, posObjetivo;
-
-            // Encontrar posición actual y objetivo de Manhattan 
-            for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                    if (tablero[i][j] == num) {
-                        posActual = {i,j};
-                    }
-                    if (estadoFinal[i][j] == num) {
-                        posObjetivo = {i,j};
-                    }
-                }
-            }
-
-            // Calcular distancia de Manhattan 
-            return abs(posActual.first - posObjetivo.first) + abs(posActual.second - posObjetivo.second);
-        }
-
         //-----------OTRAS FUNCIONES-----------
 
         // Limpiar matrices de estado inicial y final (se reinician a 0)
@@ -1198,7 +1217,6 @@ class Puzzle{
                 }
                 cout << endl;
                 cout << "- Puedes mover piezas adyacentes al espacio vacio '_'\n";
-                cout << "- Ganas puntos por cada pieza en posicion correcta\n";
                 cout << "- Tienes sugerencias de movimientos\n";
                 cout << "- Tu puntaje va a depender del total de piezas que estan en su lugar (1 pieza correcta = 10 puntos)\n";
                 cout << "  Si no has realizado ningun movimiento tu puntaje sera 0\n";
