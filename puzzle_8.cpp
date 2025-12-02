@@ -13,7 +13,7 @@
 
 //-----------LIBRERÍAS-----------
 #include <iostream>
-#include <math.h>       // Uso de fmod() para validar entradas numéricas 
+#include <cmath>       // Uso de fmod() para validar entradas numéricas 
 #include <stdlib.h>     // Generación de alatorios (rand() y srand())
 #include <ctime>        // Manejo de tiempo para aleatorios y obtención de tiempo actual
 #include <cctype>       // Funciones para manejo de caracteres  
@@ -24,9 +24,7 @@
 #include <vector>       // Estructura de datos vector para vectores y matrices 
 #include <queue>        // Colas de prioridad para algoritmo A* (A star)
 #include <set>          // Conjunto para evitar datos repetidos en A*
-#include <map>          // Mapa para estructuras de datos auxiliares 
-#include <algorithm>    // Funciones de ordenamiento y manipulación de contenedores 
-#include <functional>   // Necesario para std::function en priority_queue
+#include <algorithm>    // Funciones de ordenamiento y manipulación de contenedores  
 
 using namespace std;
 
